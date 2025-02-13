@@ -14,12 +14,17 @@ from PIL import Image
 
 app = FastAPI()
 
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Home page!"}
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["http://localhost:5173"],  # URL ของ Vue.js
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # อนุญาตให้ใช้คำขอ HTTP ได้ทุกประเภท
+    allow_headers=["*"],  # อนุญาตให้ใช้ headers ได้ทุกตัว
 )
 
 load_dotenv()
@@ -39,12 +44,14 @@ def signup(user_data: User_signup, db: Session = Depends(get_db)):
 # เข้าสู่ระบบ
 @app.post("/login/")
 def login(request: User_login, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_name == request.username).first()
-    if not user or not pwd_context.verify(request.password, user.user_password):
+    user = db.query(User).filter(User.user_name == request.user_name).first()
+    
+    # ตรวจสอบว่า user กับ password ตรงกันหรือไม่
+    if user and user.user_password == request.password:
+        # ถ้าตรงก็ส่ง response กลับ
+        return {"message": "Login successful", "user_id": user.user_id}
+    else:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    token = jwt.encode({"sub": request.username}, SECRET_KEY, algorithm=ALGORITHM)
-    return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/post_reciept/")
 async def create_reciept(user_id: int = Form(...), 
